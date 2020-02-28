@@ -13,7 +13,7 @@ func TestResultLoadAndSave(t *testing.T) {
 	assert := assert.New(t)
 
 	json := `{
-	"Parts": [
+	"parts": [
 		{
 			"device": "A",
 			"expiry": "2021-02-25T00:00:00Z",
@@ -42,7 +42,7 @@ func TestResultLoadAndSave(t *testing.T) {
 			"subject": "CN=mrs. c"
 		}
 	],
-	"Threshold": 2
+	"threshold": 2
 }`
 
 	result, err := Load(strings.NewReader(";"))

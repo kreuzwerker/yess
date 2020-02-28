@@ -11,8 +11,8 @@ const errFailedToDecode = "failed to decode result"
 
 // Result represents the result of a split into n parts with the given threshold.
 type Result struct {
-	Parts     []*Part
-	Threshold int
+	Parts     []*Part `json:"parts"`
+	Threshold int     `json:"threshold"`
 }
 
 // Load loads a result from a reader, e.g. a file
