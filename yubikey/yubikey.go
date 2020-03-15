@@ -5,6 +5,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/kreuzwerker/yess/encrypt"
@@ -110,10 +111,10 @@ func (y *Yubikey) Decrypt(p *result.Part) ([]byte, error) {
 }
 
 // decryptECC decrypts a given part using ECC keys, yielding the plaintext share
-func (y *Yubikey) decryptECC(pub *ecdsa.PublicKey, p *result.Part) ([]byte, error) {
+func (y *Yubikey) decryptECC(ekp *ecdsa.PublicKey, p *result.Part) ([]byte, error) {
 
 	// marshal the public key into the expected ANSI X9.62 format - see https://pkg.go.dev/pault.ag/go/ykpiv?tab=doc#Slot.Decrypt
-	octet := elliptic.Marshal(pub.Curve, pub.X, pub.Y)
+	octet := elliptic.Marshal(ekp.Curve, ekp.X, ekp.Y)
 
 	// decrypt, yielding the shared ephemeral key
 	sk, err := y.slot.Decrypt(nil, octet, nil)
@@ -158,17 +159,33 @@ func (y *Yubikey) Encrypt(msg []byte) (*result.Part, error) {
 }
 
 // encryptECC encrypts the given share using ECC keys into a Result
-func (y *Yubikey) encryptECC(pub *ecdsa.PublicKey, msg []byte) (*result.Part, error) {
+func (y *Yubikey) encryptECC(dkp *ecdsa.PublicKey, msg []byte) (*result.Part, error) {
 
-	// generate ephemeral keypair
-	sec, px, py, err := elliptic.GenerateKey(pub.Curve, rand.Reader)
+	var (
+		ekp *ecdsa.PublicKey
+		sk  *big.Int
+	)
 
-	if err != nil {
-		return nil, errors.Wrapf(err, errFailedToGenerateEphemeralECCKeypair)
+	{
+
+		// generate ephemeral keypair
+		eks, px, py, err := elliptic.GenerateKey(dkp.Curve, rand.Reader)
+
+		if err != nil {
+			return nil, errors.Wrapf(err, errFailedToGenerateEphemeralECCKeypair)
+		}
+
+		// the ecsda structure is used due to native marshalling capabilities in package X509
+		ekp = &ecdsa.PublicKey{
+			X:     px,
+			Y:     py,
+			Curve: dkp.Curve,
+		}
+
+		// perform key exchange
+		sk, _ = dkp.Curve.ScalarMult(dkp.X, dkp.Y, eks)
+
 	}
-
-	// perform key exchange
-	sk, _ := pub.Curve.ScalarMult(pub.X, pub.Y, sec)
 
 	if Debug != nil {
 		Debug("encrypting with ECC using SK %x", sk)
@@ -190,12 +207,7 @@ func (y *Yubikey) encryptECC(pub *ecdsa.PublicKey, msg []byte) (*result.Part, er
 		Subject: y.Subject,
 	}
 
-	// marshal the key - the ecsda structure is used due to native marshalling capabilities in package X509
-	if err := result.AddKey(&ecdsa.PublicKey{
-		X:     px,
-		Y:     py,
-		Curve: pub.Curve,
-	}); err != nil {
+	if err := result.AddKey(ekp); err != nil {
 		return nil, err
 	}
 

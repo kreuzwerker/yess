@@ -14,18 +14,18 @@ var Debug func(string, ...interface{})
 const errInvalidHash = "invalid hash, parts are missing"
 
 // Combine attempts to combine the given parts
-func Combine(parts [][]byte) ([]byte, error) {
+func Combine(shps [][]byte) ([]byte, error) {
 
 	if Debug != nil {
-		Debug("combining %d parts", len(parts))
+		Debug("combining %d parts", len(shps))
 
-		for idx, share := range parts {
-			Debug("share %d: %x", idx+1, share)
+		for idx, shp := range shps {
+			Debug("share %d: %x", idx+1, shp)
 		}
 
 	}
 
-	data, err := shamir.Combine(parts)
+	data, err := shamir.Combine(shps)
 
 	if err != nil {
 		return nil, err
@@ -49,14 +49,15 @@ func Combine(parts [][]byte) ([]byte, error) {
 }
 
 // Split splits the given secret into parts
-func Split(secret []byte, parts, threshold int) ([][]byte, error) {
+func Split(s []byte, parts, threshold int) ([][]byte, error) {
 
 	if Debug != nil {
-		Debug("splitting %x into %d parts with a threshold of %d", secret, parts, threshold)
+		Debug("splitting s %x into %d parts with a threshold of %d", s, parts, threshold)
 	}
 
-	data := append(secret, hash(secret)...)
-	shares, err := shamir.Split(data, parts, threshold)
+	sh := append(s, hash(s)...)
+
+	shps, err := shamir.Split(sh, parts, threshold)
 
 	if err != nil {
 		return nil, err
@@ -64,19 +65,19 @@ func Split(secret []byte, parts, threshold int) ([][]byte, error) {
 
 	if Debug != nil {
 
-		for idx, share := range shares {
-			Debug("share %d: %x", idx+1, share)
+		for idx, shp := range shps {
+			Debug("shp %d: %x", idx+1, shp)
 		}
 
 	}
 
-	return shares, nil
+	return shps, nil
 
 }
 
-func hash(data []byte) []byte {
+func hash(s []byte) []byte {
 
-	out := sha3.Sum256(data)
+	out := sha3.Sum256(s)
 
 	return out[:]
 

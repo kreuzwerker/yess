@@ -69,10 +69,10 @@ Currently only ECC keys are supported.
 #### Splitting
 
 - Apply SHA3-256 hash on _s_ and concat resulting hash _h_ to _s_, yielding _sh_
-- Split _sh_ into _p_ parts using [Shamir Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing) with _p_ and _t_, yielding _p_ times _shp_
+- Split _sh_ into _p_ parts using [Shamir Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing) with _p_ and _t_, yielding _p_ times _shp_ (_shps_)
 - For each _shp_
-  - generate ephemeral ECC keypair _ek_ matching the curve of the device public key
-  - perform key exchange with _ek_ and device public key, yielding shared ephemeral key _sk_
+  - generate ephemeral ECC keypair _ekp_ / _eks_ matching the curve of the device public key (_dkp_)
+  - perform key exchange with _eks_ and _dkp_, yielding shared ephemeral key _sk_
   - derive a 32-bit key _dk_ from _sk_ using SHA3-256
   - encrypt _shp_ using a NacL secretbox, with _dk_ as key and zero as nonce (since keys are ephemeral anyways) yielding _shpe_
   - store _shpe_ and the public key _pk_ of _ek_ in metadata to allow for later recovery
@@ -80,7 +80,7 @@ Currently only ECC keys are supported.
 #### Combining
 
 - For each _shpe_
-  - recover _sk_ by calling `Decrypt` on device using _pk_
+  - recover _sk_ by calling `Decrypt` on device using _ekp_
   - derive _dk_ from _sk_ using SHA3-256
   - decrypt _shpe_ using a NacL secretbox, with _dk_ as key and zero as nonce (since keys are ephemeral anyways) yielding _shp_
 - As soon as _t_ has been passed, attempt a Shamir Secret Sharing recovery and continue with the loop if that fails
